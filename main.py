@@ -211,12 +211,12 @@ class EasyApplyLinkedin:
             job_title = self.driver.find_element(By.CLASS_NAME, "job-details-jobs-unified-top-card__job-title").text
             company_name = self.driver.find_element(By.CLASS_NAME, "job-details-jobs-unified-top-card__company-name").text
             location = self.driver.find_element(By.CLASS_NAME, "job-details-jobs-unified-top-card__primary-description-container").text
-            posted_date = self.driver.find_element(By.CLASS_NAME, "jobs-unified-top-card__posted-date").text
-            applicants = self.driver.find_element(By.CLASS_NAME, "jobs-unified-top-card__applicant-count").text
+            # posted_date = self.driver.find_element(By.CLASS_NAME, "jobs-unified-top-card__posted-date").text
+            # applicants = self.driver.find_element(By.CLASS_NAME, "jobs-unified-top-card__applicant-count").text
             job_description = self.driver.find_element(By.CLASS_NAME, "jobs-description__content").text
             
             # Save job information before attempting to apply
-            self.save_job_info(job_title, company_name, location, posted_date, applicants, job_description)
+            self.save_job_info(job_title, company_name, location, job_description)
 
             # Click the Apply button
             apply_button = self.wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "jobs-apply-button")))
@@ -233,30 +233,47 @@ class EasyApplyLinkedin:
             print('Application button not found. You may have already applied to this job.')
         except Exception as e:
             print(f'An error occurred while processing the job: {str(e)}')
+        finally:
+            # Ensure we save job info even if there's an error
+            if 'job_title' in locals():
+                self.save_job_info(job_title, company_name, location, job_description)
+            else:
+                print("Could not extract job details to save")
 
-    def save_job_info(self, title, company, location, date, applicants, description):
+    def save_job_info(self, title, company, location, description):
         """Save job information to a CSV file"""
-        filename = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'processed_jobs.csv')
-        file_exists = os.path.isfile(filename)
-        
-        with open(filename, 'a', newline='', encoding='utf-8') as csvfile:
-            fieldnames = ['Date Processed', 'Job Title', 'Company', 'Location', 'Date Posted', 'Applicants', 'Description']
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        try:
+            filename = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'processed_jobs.csv')
+            file_exists = os.path.isfile(filename)
             
-            if not file_exists:
-                writer.writeheader()
+            print(f"Attempting to save job info to: {filename}")
             
-            writer.writerow({
-                'Date Processed': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                'Job Title': title,
-                'Company': company,
-                'Location': location,
-                'Date Posted': date,
-                'Applicants': applicants,
-                'Description': description[:500]  # Limit description to 500 characters
-            })
-        
-        print(f"Job information saved to {filename}")
+            with open(filename, 'a', newline='', encoding='utf-8') as csvfile:
+                fieldnames = ['Date Processed', 'Job Title', 'Company', 'Location', 'Description']
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                
+                if not file_exists:
+                    writer.writeheader()
+                    print("Created new CSV file with header")
+                
+                print("LOCATION: ", location)
+                writer.writerow({
+                    'Date Processed': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    'Job Title': title,
+                    'Company': company,
+                    'Location': location,
+                    # 'Date Posted': date,
+                    # 'Applicants': applicants,
+                    'Description': description[:500]  # Limit description to 500 characters
+                })
+            
+            print(f"Successfully saved job information to {filename}")
+        except IOError as e:
+            print(f"IOError occurred while saving job info: {e}")
+            print(f"Current working directory: {os.getcwd()}")
+            print(f"File path attempted: {filename}")
+        except Exception as e:
+            print(f"An unexpected error occurred while saving job info: {e}")
 
     def close_session(self):
         """This function closes the actual session"""
